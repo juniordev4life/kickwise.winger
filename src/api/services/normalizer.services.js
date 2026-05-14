@@ -58,6 +58,37 @@ export function normalizeRankingResponse(raw) {
 }
 
 /**
+ * Normalize Kickbase's GET /v4/leagues/selection response into Kickwise's
+ * league-list shape. Kickbase returns `{ it: [...] }` with abbreviated keys.
+ *
+ * @param {object} raw raw Kickbase response
+ * @returns {{ leagues: Array<{
+ *   id: string, name: string, rank: number|null, teamValue: number|null,
+ *   budget: number|null, playerCount: number|null, unreadCount: number|null,
+ *   isAdmin: boolean, imageUrl: string|null
+ * }>}}
+ *
+ * @example
+ *   const out = normalizeLeaguesSelectionResponse(raw);
+ *   //  out.leagues[0] = { id: "7081897", name: "RB Leibzig", rank: 8, ... }
+ */
+export function normalizeLeaguesSelectionResponse(raw) {
+  return {
+    leagues: (raw.it ?? raw.leagues ?? []).map((l) => ({
+      id: l.i ?? l.id ?? "",
+      name: l.n ?? l.name ?? "",
+      rank: l.pl ?? l.rank ?? null,
+      teamValue: l.tv ?? l.teamValue ?? null,
+      budget: l.b ?? l.budget ?? null,
+      playerCount: l.lpc ?? l.playerCount ?? null,
+      unreadCount: l.un ?? l.unreadCount ?? null,
+      isAdmin: Boolean(l.adm ?? l.isAdmin ?? false),
+      imageUrl: l.lim ?? l.imageUrl ?? null
+    }))
+  };
+}
+
+/**
  * Normalize a Kickbase squad response (the user's current squad in a league).
  *
  * @param {object} raw raw Kickbase JSON
