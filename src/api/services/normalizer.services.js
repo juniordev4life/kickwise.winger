@@ -46,13 +46,16 @@ export function normalizeLoginResponse(raw) {
 export function normalizeRankingResponse(raw) {
   return {
     leagueId: raw.id ?? raw.lgid ?? "",
-    entries: (raw.users ?? raw.rnk ?? []).map((entry) => ({
-      userId: entry.uid ?? entry.id ?? "",
-      name: entry.uname ?? entry.name ?? "",
-      totalPoints: Number(entry.spr ?? entry.totalPoints ?? 0),
-      rank: Number(entry.pl ?? entry.rank ?? 0),
+    leagueName: raw.ti ?? raw.name ?? null,
+    entries: (raw.us ?? raw.users ?? raw.rnk ?? []).map((entry) => ({
+      userId: entry.i ?? entry.uid ?? entry.id ?? "",
+      name: entry.n ?? entry.uname ?? entry.name ?? "",
+      totalPoints: Number(entry.sp ?? entry.spr ?? entry.totalPoints ?? 0),
+      rank: Number(entry.spl ?? entry.pl ?? entry.rank ?? 0),
       teamValue: entry.tv ?? entry.teamValue ?? null,
-      lastWeekPoints: entry.lp ?? entry.lastWeekPoints ?? null
+      matchdayPoints: entry.mdp ?? null,
+      seasonHighPoints: entry.shp ?? null,
+      isAdmin: Boolean(entry.adm ?? false)
     }))
   };
 }

@@ -51,22 +51,35 @@ describe("normalizeLoginResponse", () => {
 });
 
 describe("normalizeRankingResponse", () => {
-  it("maps ranking entries", () => {
+  it("maps modern Kickbase ranking entries (us / i / n / sp / spl)", () => {
     const raw = {
-      users: [
-        { uid: "U1", uname: "Marco", spr: 245, pl: 1, tv: 80_000_000 },
-        { uid: "U2", uname: "Pia", spr: 233, pl: 2, tv: 75_000_000 }
+      ti: "Vater & Sohn",
+      us: [
+        { i: "U1", n: "Marco", sp: 15719, spl: 1, tv: 165_500_000, adm: true, mdp: 0, shp: 15719 },
+        { i: "U2", n: "Pia", sp: 14820, spl: 2, tv: 158_000_000, adm: false, mdp: 412, shp: 14820 }
       ]
     };
     const result = normalizeRankingResponse({ ...raw, id: "L1" });
     expect(result.leagueId).toBe("L1");
+    expect(result.leagueName).toBe("Vater & Sohn");
     expect(result.entries).toHaveLength(2);
     expect(result.entries[0]).toMatchObject({
       userId: "U1",
       name: "Marco",
-      totalPoints: 245,
-      rank: 1
+      totalPoints: 15719,
+      rank: 1,
+      isAdmin: true
     });
+    expect(result.entries[1].matchdayPoints).toBe(412);
+  });
+
+  it("falls back to legacy long-form keys when present", () => {
+    const raw = {
+      users: [{ uid: "U1", uname: "X", spr: 100, pl: 5, tv: 1 }]
+    };
+    const result = normalizeRankingResponse({ ...raw, id: "L1" });
+    expect(result.entries[0].userId).toBe("U1");
+    expect(result.entries[0].rank).toBe(5);
   });
 });
 
