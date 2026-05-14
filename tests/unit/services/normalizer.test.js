@@ -99,3 +99,112 @@ describe("normalizeSquadResponse", () => {
     expect(result.players[1].status).toBe("injured");
   });
 });
+
+import {
+  normalizeCompetitionTableResponse,
+  normalizePlayerDetailResponse,
+  normalizeTeamProfileResponse
+} from "../../../src/api/services/normalizer.services.js";
+
+describe("normalizeCompetitionTableResponse", () => {
+  it("maps team-table entries", () => {
+    const raw = {
+      it: [
+        { tid: "7", tn: "Leverkusen", cpl: 6, mc: 33, gd: 21, cp: 58, tim: "x.svg" },
+        { tid: "43", tn: "Leipzig", cpl: 16, mc: 33, gd: -2, cp: 43, tim: "y.svg" }
+      ]
+    };
+    const out = normalizeCompetitionTableResponse(raw);
+    expect(out.teams).toHaveLength(2);
+    expect(out.teams[0]).toMatchObject({
+      teamId: "7",
+      name: "Leverkusen",
+      rank: 6,
+      matchesPlayed: 33,
+      goalDifference: 21,
+      seasonPoints: 58
+    });
+  });
+});
+
+describe("normalizeTeamProfileResponse", () => {
+  it("maps players inside a team profile", () => {
+    const raw = {
+      tid: "43",
+      tn: "RB Leipzig",
+      it: [
+        {
+          i: "8227",
+          n: "Vandevoordt",
+          pos: 1,
+          st: 0,
+          mv: 10100000,
+          sdmvt: -236209,
+          prob: 0.95,
+          tid: "43",
+          pim: "p.png"
+        },
+        {
+          i: "10771",
+          n: "Diomande",
+          pos: 3,
+          st: 0,
+          mv: 35000000,
+          sdmvt: 100000,
+          prob: 0.8,
+          tid: "43"
+        }
+      ]
+    };
+    const out = normalizeTeamProfileResponse(raw);
+    expect(out.teamId).toBe("43");
+    expect(out.teamName).toBe("RB Leipzig");
+    expect(out.players).toHaveLength(2);
+    expect(out.players[0]).toMatchObject({
+      playerId: "8227",
+      name: "Vandevoordt",
+      position: "GK",
+      marketValue: 10100000,
+      marketValueTrend24h: -236209,
+      startingProbability: 0.95
+    });
+    expect(out.players[1].position).toBe("MID");
+  });
+});
+
+describe("normalizePlayerDetailResponse", () => {
+  it("flattens player detail with points history", () => {
+    const raw = {
+      i: "8227",
+      fn: "Maarten",
+      ln: "Vandevoordt",
+      shn: 26,
+      tid: "43",
+      tn: "Leipzig",
+      pos: 1,
+      st: 0,
+      tp: 1313,
+      ap: 109,
+      mv: 9919671,
+      tfhmvt: -236209,
+      g: 0,
+      a: 0,
+      y: 0,
+      r: 0,
+      ph: [
+        { hp: true, p: 77 },
+        { hp: true, p: 87 },
+        { hp: false, p: 0 }
+      ],
+      plpt: "Ligainsider",
+      dt: "2026-04-09T12:27:29Z"
+    };
+    const out = normalizePlayerDetailResponse(raw);
+    expect(out.name).toBe("Maarten Vandevoordt");
+    expect(out.position).toBe("GK");
+    expect(out.totalPoints).toBe(1313);
+    expect(out.pointsHistory).toHaveLength(3);
+    expect(out.pointsHistory[0]).toEqual({ matchday: 1, points: 77, hasPlayed: true });
+    expect(out.pointsHistory[2]).toEqual({ matchday: 3, points: 0, hasPlayed: false });
+  });
+});

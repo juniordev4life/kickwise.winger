@@ -61,6 +61,121 @@ export function normalizeRankingResponse(raw) {
 }
 
 /**
+ * Normalize Kickbase's GET /v4/competitions/{cid}/table response into a
+ * compact list of currently active teams.
+ *
+ * @param {object} raw
+ * @returns {{ teams: Array<{
+ *   teamId: string, name: string, rank: number|null,
+ *   matchesPlayed: number|null, goalDifference: number|null,
+ *   seasonPoints: number|null, logoUrl: string|null
+ * }>}}
+ *
+ * @example
+ *   const out = normalizeCompetitionTableResponse(raw);
+ */
+export function normalizeCompetitionTableResponse(raw) {
+  return {
+    teams: (raw.it ?? []).map((t) => ({
+      teamId: t.tid ?? t.id ?? "",
+      name: t.tn ?? t.name ?? "",
+      rank: t.cpl ?? null,
+      matchesPlayed: t.mc ?? null,
+      goalDifference: t.gd ?? null,
+      seasonPoints: t.cp ?? null,
+      logoUrl: t.tim ?? null
+    }))
+  };
+}
+
+/**
+ * Normalize Kickbase's GET /v4/competitions/{cid}/teams/{tid}/teamprofile
+ * response into the player-list shape we persist.
+ *
+ * @param {object} raw
+ * @returns {{ teamId: string, teamName: string|null, players: Array<{
+ *   playerId: string, name: string, position: string, status: string,
+ *   marketValue: number|null, marketValueTrend24h: number|null,
+ *   startingProbability: number|null, teamId: string,
+ *   imageUrl: string|null
+ * }>}}
+ *
+ * @example
+ *   const out = normalizeTeamProfileResponse(raw);
+ */
+export function normalizeTeamProfileResponse(raw) {
+  const teamId = String(raw.tid ?? "");
+  return {
+    teamId,
+    teamName: raw.tn ?? null,
+    players: (raw.it ?? []).map((p) => ({
+      playerId: String(p.i ?? p.id ?? ""),
+      name: p.n ?? `${p.fn ?? ""} ${p.ln ?? ""}`.trim(),
+      position: mapPosition(p.pos),
+      status: mapStatus(p.st),
+      marketValue: typeof p.mv === "number" ? p.mv : null,
+      marketValueTrend24h: typeof p.sdmvt === "number" ? p.sdmvt : null,
+      startingProbability: typeof p.prob === "number" ? p.prob : null,
+      teamId: String(p.tid ?? teamId),
+      imageUrl: p.pim ?? null
+    }))
+  };
+}
+
+/**
+ * Normalize Kickbase's GET /v4/competitions/{cid}/players/{pid} response.
+ * Returns much more than the team profile — including `ph` (per-matchday
+ * points), totals, average, and the upcoming/recent match summary.
+ *
+ * @param {object} raw
+ * @returns {{
+ *   playerId: string, firstName: string, lastName: string,
+ *   name: string, shirtNumber: number|null, teamId: string,
+ *   teamName: string|null, position: string, status: string,
+ *   totalPoints: number|null, averagePoints: number|null,
+ *   marketValue: number|null, marketValueTrend24h: number|null,
+ *   goals: number|null, assists: number|null,
+ *   yellowCards: number|null, redCards: number|null,
+ *   pointsHistory: Array<{matchday: number, points: number, hasPlayed: boolean}>,
+ *   dataSource: string|null, dataTimestamp: string|null
+ * }}
+ *
+ * @example
+ *   const detail = normalizePlayerDetailResponse(raw);
+ */
+export function normalizePlayerDetailResponse(raw) {
+  const first = raw.fn ?? "";
+  const last = raw.ln ?? "";
+  const combined = raw.n ?? `${first} ${last}`.trim();
+  return {
+    playerId: String(raw.i ?? raw.pi ?? ""),
+    firstName: first,
+    lastName: last,
+    name: combined,
+    shirtNumber: typeof raw.shn === "number" ? raw.shn : null,
+    teamId: String(raw.tid ?? ""),
+    teamName: raw.tn ?? null,
+    position: mapPosition(raw.pos),
+    status: mapStatus(raw.st),
+    totalPoints: typeof raw.tp === "number" ? raw.tp : null,
+    averagePoints: typeof raw.ap === "number" ? raw.ap : null,
+    marketValue: typeof raw.mv === "number" ? raw.mv : null,
+    marketValueTrend24h: typeof raw.tfhmvt === "number" ? raw.tfhmvt : null,
+    goals: typeof raw.g === "number" ? raw.g : null,
+    assists: typeof raw.a === "number" ? raw.a : null,
+    yellowCards: typeof raw.y === "number" ? raw.y : null,
+    redCards: typeof raw.r === "number" ? raw.r : null,
+    pointsHistory: (raw.ph ?? []).map((entry, idx) => ({
+      matchday: idx + 1,
+      points: typeof entry.p === "number" ? entry.p : 0,
+      hasPlayed: Boolean(entry.hp)
+    })),
+    dataSource: raw.plpt ?? null,
+    dataTimestamp: raw.dt ?? null
+  };
+}
+
+/**
  * Normalize Kickbase's GET /v4/leagues/selection response into Kickwise's
  * league-list shape. Kickbase returns `{ it: [...] }` with abbreviated keys.
  *
