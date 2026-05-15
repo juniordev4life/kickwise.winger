@@ -67,11 +67,13 @@ const setLineupBodySchema = {
 };
 
 /**
- * POST /v4/leagues/{leagueId}/lineup
+ * POST /v4/leagues/{leagueId}/lineup/fill
  *
  * Submits a new lineup for the authenticated user in the given league.
- * Body shape per the inoffizielle Kickbase API:
- *   { "type": "4-4-2", "players": ["1235", ...] }
+ * Marco's leagues run Arena-style rules (full-pool draft per matchday),
+ * which use the /fill endpoint with a different body shape than the
+ * classical "set lineup" path:
+ *   { "lud": "4-4-2", "pls": ["1235", ...] }
  *
  * Players are passed in canonical slot order (GK, defenders, midfielders,
  * forwards) — Kickbase derives positions from the formation type.
@@ -83,9 +85,9 @@ export const setLineupController = {
       const { leagueId } = request.params;
       const raw = await kickbaseRequest({
         method: "POST",
-        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
+        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup/fill`,
         token: request.kickbaseToken,
-        body: { type: request.body.type, players: request.body.players },
+        body: { lud: request.body.type, pls: request.body.players },
         log: request.log
       });
       return setGeneralResponse(reply, 200, "Success", "Lineup updated", raw ?? {});
