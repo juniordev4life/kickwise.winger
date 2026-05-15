@@ -269,7 +269,12 @@ export function normalizePlayerDetailResponse(raw) {
     yellowCards: typeof raw.y === "number" ? raw.y : null,
     redCards: typeof raw.r === "number" ? raw.r : null,
     pointsHistory: (raw.ph ?? []).map((entry, idx) => ({
-      matchday: idx + 1,
+      // Kickbase carries the real matchday number on `entry.day`. We used
+      // to fall back to `idx + 1` which broke mid-season because the
+      // endpoint only returns the latest ~5 matchdays — they were
+      // labelled matchday 1..5 instead of the real 30..34. Keep idx+1
+      // only as a defensive last resort.
+      matchday: typeof entry.day === "number" ? entry.day : idx + 1,
       points: typeof entry.p === "number" ? entry.p : 0,
       hasPlayed: Boolean(entry.hp)
     })),
