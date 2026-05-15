@@ -1,4 +1,5 @@
 import {
+  getCurrentLineupController,
   getLeagueMeController,
   getLeagueRankingController,
   getMyLeaguesController,
@@ -28,5 +29,11 @@ export default async function leaguesRoutes(fastify) {
     schema: setLineupController.schema,
     preHandler: [requireKickbaseToken],
     handler: setLineupController.handler
+  });
+
+  fastify.get("/:leagueId/lineup", {
+    schema: getCurrentLineupController.schema,
+    preHandler: [requireKickbaseToken],
+    handler: getCurrentLineupController.handler
   });
 }

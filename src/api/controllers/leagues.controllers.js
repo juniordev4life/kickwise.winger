@@ -97,6 +97,28 @@ export const setLineupController = {
   }
 };
 
+/**
+ * GET /v4/leagues/{leagueId}/lineup — fetch the user's currently saved
+ * lineup. Useful to verify that a POST actually persisted.
+ */
+export const getCurrentLineupController = {
+  schema: { params: leagueParamsSchema },
+  handler: async (request, reply) => {
+    try {
+      const { leagueId } = request.params;
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(reply, 200, "Success", "Current lineup", raw ?? {});
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
 export const getLeagueMeController = {
   schema: { params: leagueParamsSchema },
   handler: async (request, reply) => {
