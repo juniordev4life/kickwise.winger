@@ -1,5 +1,8 @@
 import {
   getChallengeLineupOverviewController,
+  getChallengeProfileController,
+  getChallengesLiveController,
+  getChallengesLobbyController,
   getChallengesOverviewController,
   getChallengesSelectionController,
   submitChallengeLineupController
@@ -15,6 +18,22 @@ export default async function challengesRoutes(fastify) {
   fastify.get("/overview", {
     preHandler: [requireKickbaseToken],
     handler: getChallengesOverviewController.handler
+  });
+
+  fastify.get("/live", {
+    preHandler: [requireKickbaseToken],
+    handler: getChallengesLiveController.handler
+  });
+
+  fastify.get("/lobby", {
+    preHandler: [requireKickbaseToken],
+    handler: getChallengesLobbyController.handler
+  });
+
+  fastify.get("/:challengeId/profile", {
+    schema: getChallengeProfileController.schema,
+    preHandler: [requireKickbaseToken],
+    handler: getChallengeProfileController.handler
   });
 
   fastify.get("/:challengeId/lineup/overview", {

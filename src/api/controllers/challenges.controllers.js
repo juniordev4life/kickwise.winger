@@ -51,6 +51,69 @@ export const getChallengesOverviewController = {
 };
 
 /**
+ * GET /api/v1/kickbase/challenges/live — live lobby (challenges the user is
+ * actively participating in right now). Pass-through to
+ * /v4/challenges/lobby/overview/live.
+ */
+export const getChallengesLiveController = {
+  handler: async (request, reply) => {
+    try {
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: "/v4/challenges/lobby/overview/live",
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(reply, 200, "Success", "Challenges live lobby", raw ?? {});
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
+/**
+ * GET /api/v1/kickbase/challenges/lobby — generic lobby overview (live + upcoming).
+ */
+export const getChallengesLobbyController = {
+  handler: async (request, reply) => {
+    try {
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: "/v4/challenges/lobby/overview",
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(reply, 200, "Success", "Challenges lobby overview", raw ?? {});
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
+/**
+ * GET /api/v1/kickbase/challenges/:id/profile — detailed challenge profile
+ * (rules, budget, matchdays). Useful to inspect what fields are available
+ * for a challenge before submitting a lineup.
+ */
+export const getChallengeProfileController = {
+  schema: { params: challengeParamsSchema },
+  handler: async (request, reply) => {
+    try {
+      const { challengeId } = request.params;
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: `/v4/challenges/${encodeURIComponent(challengeId)}/profile`,
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(reply, 200, "Success", "Challenge profile", raw ?? {});
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
+/**
  * GET /api/v1/kickbase/challenges/:id/lineup/overview — current lineup +
  * meta for a specific challenge. Useful to discover the participant id
  * (`pi`) and group id (`gid`) needed for the submit body.
