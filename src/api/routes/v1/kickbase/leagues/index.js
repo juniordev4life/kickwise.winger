@@ -1,7 +1,8 @@
 import {
   getLeagueMeController,
   getLeagueRankingController,
-  getMyLeaguesController
+  getMyLeaguesController,
+  setLineupController
 } from "../../../../controllers/leagues.controllers.js";
 import { requireKickbaseToken } from "../../../../middlewares/bearerToken.middlewares.js";
 
@@ -21,5 +22,11 @@ export default async function leaguesRoutes(fastify) {
     schema: getLeagueMeController.schema,
     preHandler: [requireKickbaseToken],
     handler: getLeagueMeController.handler
+  });
+
+  fastify.post("/:leagueId/lineup", {
+    schema: setLineupController.schema,
+    preHandler: [requireKickbaseToken],
+    handler: setLineupController.handler
   });
 }
