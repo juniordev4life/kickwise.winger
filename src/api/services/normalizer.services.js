@@ -61,6 +61,109 @@ export function normalizeRankingResponse(raw) {
 }
 
 /**
+ * Translate Kickbase's `k` (key-action) codes that come back per matchday in
+ * the performance endpoint. These are not officially documented; the codes
+ * below were inferred by correlating high-point matchdays of known scorers
+ * (Kane hattricks, etc.) with the array contents.
+ *
+ * @param {number} code
+ * @returns {"goal"|"assist"|"yellow_card"|"red_card"|"minutes"|"unknown"}
+ */
+function mapKickbaseActionCode(code) {
+  switch (Number(code)) {
+    case 1:
+      return "goal";
+    case 3:
+      return "assist";
+    case 4:
+      return "yellow_card";
+    case 5:
+      return "red_card";
+    case 8:
+      return "substitution";
+    case 9:
+      return "minutes_bonus";
+    default:
+      return "unknown";
+  }
+}
+
+/**
+ * Normalize Kickbase's player performance response (multi-season matchday
+ * history). Returns an array of seasons, each with a list of matchdays.
+ *
+ * @param {object} raw response from GET /v4/competitions/{cid}/players/{pid}/performance
+ * @returns {{ seasons: Array<{
+ *   seasonId: string, title: string, leagueName: string,
+ *   isCurrent: boolean,
+ *   matchdays: Array<{
+ *     matchday: number, points: number|null, minutesPlayed: string|null,
+ *     matchDate: string|null, matchId: string|null,
+ *     homeTeamId: string, awayTeamId: string,
+ *     homeGoals: number|null, awayGoals: number|null,
+ *     homeTeamLogo: string|null, awayTeamLogo: string|null,
+ *     playerTeamId: string,
+ *     hasPlayed: boolean, isUpcoming: boolean, isCurrent: boolean,
+ *     status: string|number,
+ *     goals: number, assists: number,
+ *     yellowCards: number, redCards: number,
+ *     actions: Array<string>
+ *   }>
+ * }>}}
+ *
+ * @example
+ *   const perf = normalizePlayerPerformanceResponse(raw);
+ */
+export function normalizePlayerPerformanceResponse(raw) {
+  return {
+    seasons: (raw.it ?? []).map((s) => {
+      const matchdays = (s.ph ?? []).map((m) => {
+        const codes = (m.k ?? []).map(mapKickbaseActionCode);
+        const goals = codes.filter((c) => c === "goal").length;
+        const assists = codes.filter((c) => c === "assist").length;
+        const yellow = codes.filter((c) => c === "yellow_card").length;
+        const red = codes.filter((c) => c === "red_card").length;
+
+        const mdst = m.mdst ?? 0;
+        const isUpcoming = mdst === 0 || (m.p === undefined && m.mp === undefined);
+
+        return {
+          matchday: m.day ?? null,
+          points: typeof m.p === "number" ? m.p : null,
+          minutesPlayed: m.mp ?? null,
+          matchDate: m.md ?? null,
+          matchId: m.mi ?? null,
+          homeTeamId: String(m.t1 ?? ""),
+          awayTeamId: String(m.t2 ?? ""),
+          homeGoals: typeof m.t1g === "number" ? m.t1g : null,
+          awayGoals: typeof m.t2g === "number" ? m.t2g : null,
+          homeTeamLogo: m.t1im ?? null,
+          awayTeamLogo: m.t2im ?? null,
+          playerTeamId: String(m.pt ?? ""),
+          status: m.st ?? null,
+          isCurrent: Boolean(m.cur),
+          isUpcoming,
+          hasPlayed: !isUpcoming && typeof m.p === "number",
+          goals,
+          assists,
+          yellowCards: yellow,
+          redCards: red,
+          actions: codes
+        };
+      });
+      const isCurrent = matchdays.some((md) => md.isCurrent);
+      return {
+        seasonId: String(s.sid ?? ""),
+        title: s.ti ?? "",
+        leagueName: s.n ?? "",
+        isCurrent,
+        matchdays
+      };
+    })
+  };
+}
+
+/**
  * Normalize Kickbase's GET /v4/competitions/{cid}/table response into a
  * compact list of currently active teams.
  *

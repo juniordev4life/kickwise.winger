@@ -1,6 +1,7 @@
 import {
   getCompetitionTableController,
   getPlayerDetailController,
+  getPlayerPerformanceController,
   getTeamProfileController
 } from "../../../../controllers/competitions.controllers.js";
 import { requireKickbaseToken } from "../../../../middlewares/bearerToken.middlewares.js";
@@ -22,5 +23,11 @@ export default async function competitionsRoutes(fastify) {
     schema: getPlayerDetailController.schema,
     preHandler: [requireKickbaseToken],
     handler: getPlayerDetailController.handler
+  });
+
+  fastify.get("/:competitionId/players/:playerId/performance", {
+    schema: getPlayerPerformanceController.schema,
+    preHandler: [requireKickbaseToken],
+    handler: getPlayerPerformanceController.handler
   });
 }

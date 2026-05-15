@@ -3,6 +3,7 @@ import { kickbaseRequest } from "../services/kickbaseClient.services.js";
 import {
   normalizeCompetitionTableResponse,
   normalizePlayerDetailResponse,
+  normalizePlayerPerformanceResponse,
   normalizeTeamProfileResponse
 } from "../services/normalizer.services.js";
 
@@ -97,6 +98,30 @@ export const getPlayerDetailController = {
         "Success",
         "Player detail retrieved",
         normalizePlayerDetailResponse(raw)
+      );
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
+export const getPlayerPerformanceController = {
+  schema: { params: playerParamsSchema },
+  handler: async (request, reply) => {
+    try {
+      const { competitionId, playerId } = request.params;
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: `/v4/competitions/${encodeURIComponent(competitionId)}/players/${encodeURIComponent(playerId)}/performance`,
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(
+        reply,
+        200,
+        "Success",
+        "Player performance retrieved",
+        normalizePlayerPerformanceResponse(raw)
       );
     } catch (error) {
       return handleErrorResponse(reply, error, request);
