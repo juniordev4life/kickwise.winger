@@ -1,5 +1,5 @@
 import { handleErrorResponse, setGeneralResponse } from "../helpers/responseHandler.helpers.js";
-import { leagueParamsSchema } from "../schemas/leagues.schemas.js";
+import { leagueParamsSchema, leagueRankingQuerySchema } from "../schemas/leagues.schemas.js";
 import { kickbaseRequest } from "../services/kickbaseClient.services.js";
 import {
   normalizeLeaguesSelectionResponse,
@@ -28,24 +28,40 @@ export const getMyLeaguesController = {
   }
 };
 
+/**
+ * GET /v4/leagues/{leagueId}/ranking
+ *
+ * Returns the league ranking for the current matchday. When `?day=N` is
+ * supplied, forwards as `?day=N` to Kickbase — best-guess parameter name
+ * based on the player-performance endpoint's `entry.day` field. If
+ * Kickbase ignores it, you simply get the current snapshot back.
+ *
+ * @example
+ *   GET /api/v1/kickbase/leagues/L123/ranking            -> current MD
+ *   GET /api/v1/kickbase/leagues/L123/ranking?day=12     -> MD 12 snapshot
+ */
 export const getLeagueRankingController = {
-  schema: { params: leagueParamsSchema },
+  schema: { params: leagueParamsSchema, querystring: leagueRankingQuerySchema },
   handler: async (request, reply) => {
     try {
       const { leagueId } = request.params;
+      const day = request.query?.day;
+      const basePath = `/v4/leagues/${encodeURIComponent(leagueId)}/ranking`;
+      const path = day ? `${basePath}?day=${day}` : basePath;
       const raw = await kickbaseRequest({
         method: "GET",
-        path: `/v4/leagues/${encodeURIComponent(leagueId)}/ranking`,
+        path,
         token: request.kickbaseToken,
         log: request.log
       });
-      return setGeneralResponse(
-        reply,
-        200,
-        "Success",
-        "League ranking retrieved",
-        normalizeRankingResponse({ ...raw, id: leagueId })
-      );
+      const normalized = normalizeRankingResponse({ ...raw, id: leagueId });
+      return setGeneralResponse(reply, 200, "Success", "League ranking retrieved", {
+        ...normalized,
+        // Echo the matchday the caller asked for so consumers can build a
+        // history matrix without having to remember which day they asked
+        // for. Null means "current matchday, whatever that is".
+        matchday: typeof day === "number" ? day : null
+      });
     } catch (error) {
       return handleErrorResponse(reply, error, request);
     }
