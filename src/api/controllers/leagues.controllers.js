@@ -87,14 +87,57 @@ export const setLineupController = {
   handler: async (request, reply) => {
     try {
       const { leagueId } = request.params;
-      const raw = await kickbaseRequest({
-        method: "POST",
-        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
-        token: request.kickbaseToken,
-        body: { type: request.body.type, players: request.body.players },
-        log: request.log
+      // 1) Clear the existing lineup first. Empirically /fill (and
+      // possibly /lineup) keeps stale slots from the previous formation
+      // when you switch e.g. 4-5-1 → 4-3-3. Wiping first guarantees the
+      // new formation is set cleanly.
+      let cleared = null;
+      try {
+        cleared = await kickbaseRequest({
+          method: "POST",
+          path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup/clear`,
+          token: request.kickbaseToken,
+          log: request.log
+        });
+      } catch (clearErr) {
+        // Don't fail the whole submit if clear fails — Kickbase will
+        // sometimes 4xx if the lineup is already empty. Log + continue.
+        request.log?.warn(
+          { err: clearErr.message },
+          "Lineup clear failed, continuing to submit anyway"
+        );
+      }
+
+      // 2) Set the new lineup. Try /lineup/fill with {lud, pls} first
+      // since that's the documented body shape; fall back to /lineup with
+      // {type, players} if /fill rejects.
+      let raw;
+      try {
+        raw = await kickbaseRequest({
+          method: "POST",
+          path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup/fill`,
+          token: request.kickbaseToken,
+          body: { lud: request.body.type, pls: request.body.players },
+          log: request.log
+        });
+      } catch (fillErr) {
+        request.log?.warn(
+          { err: fillErr.message },
+          "Lineup /fill failed, trying /lineup"
+        );
+        raw = await kickbaseRequest({
+          method: "POST",
+          path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
+          token: request.kickbaseToken,
+          body: { type: request.body.type, players: request.body.players },
+          log: request.log
+        });
+      }
+
+      return setGeneralResponse(reply, 200, "Success", "Lineup updated", {
+        cleared,
+        lineup: raw ?? {}
       });
-      return setGeneralResponse(reply, 200, "Success", "Lineup updated", raw ?? {});
     } catch (error) {
       return handleErrorResponse(reply, error, request);
     }
