@@ -121,10 +121,7 @@ export const setLineupController = {
           log: request.log
         });
       } catch (fillErr) {
-        request.log?.warn(
-          { err: fillErr.message },
-          "Lineup /fill failed, trying /lineup"
-        );
+        request.log?.warn({ err: fillErr.message }, "Lineup /fill failed, trying /lineup");
         raw = await kickbaseRequest({
           method: "POST",
           path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
