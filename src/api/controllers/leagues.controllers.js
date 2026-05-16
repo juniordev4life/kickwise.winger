@@ -67,16 +67,20 @@ const setLineupBodySchema = {
 };
 
 /**
- * POST /v4/leagues/{leagueId}/lineup/fill
+ * POST /v4/leagues/{leagueId}/lineup
  *
  * Submits a new lineup for the authenticated user in the given league.
- * Marco's leagues run Arena-style rules (full-pool draft per matchday),
- * which use the /fill endpoint with a different body shape than the
- * classical "set lineup" path:
- *   { "lud": "4-4-2", "pls": ["1235", ...] }
+ * Sets BOTH the formation and the player slots. Body shape:
+ *   { "type": "4-3-3", "players": ["1235", ...] }
  *
  * Players are passed in canonical slot order (GK, defenders, midfielders,
  * forwards) — Kickbase derives positions from the formation type.
+ *
+ * NOTE: There's also a sibling /lineup/fill endpoint that only updates
+ * player slots while keeping the current formation. We don't use it
+ * because Marco wants to change formation per matchday (4-5-1, 4-3-3, …)
+ * based on the recommendation. Empirically /lineup/fill silently drops
+ * any players that don't fit the current formation's slot counts.
  */
 export const setLineupController = {
   schema: { params: leagueParamsSchema, body: setLineupBodySchema },
@@ -85,9 +89,9 @@ export const setLineupController = {
       const { leagueId } = request.params;
       const raw = await kickbaseRequest({
         method: "POST",
-        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup/fill`,
+        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
         token: request.kickbaseToken,
-        body: { lud: request.body.type, pls: request.body.players },
+        body: { type: request.body.type, players: request.body.players },
         log: request.log
       });
       return setGeneralResponse(reply, 200, "Success", "Lineup updated", raw ?? {});
