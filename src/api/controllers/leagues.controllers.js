@@ -156,6 +156,29 @@ export const getCurrentLineupController = {
   }
 };
 
+/**
+ * GET /v4/leagues/{leagueId}/me/budget — fetch the user's current cash
+ * budget for the league. Useful so the optimizer can use the real
+ * Kickbase budget value instead of a user-typed estimate.
+ */
+export const getMyBudgetController = {
+  schema: { params: leagueParamsSchema },
+  handler: async (request, reply) => {
+    try {
+      const { leagueId } = request.params;
+      const raw = await kickbaseRequest({
+        method: "GET",
+        path: `/v4/leagues/${encodeURIComponent(leagueId)}/me/budget`,
+        token: request.kickbaseToken,
+        log: request.log
+      });
+      return setGeneralResponse(reply, 200, "Success", "Budget", raw ?? {});
+    } catch (error) {
+      return handleErrorResponse(reply, error, request);
+    }
+  }
+};
+
 export const getLeagueMeController = {
   schema: { params: leagueParamsSchema },
   handler: async (request, reply) => {

@@ -2,6 +2,7 @@ import {
   getCurrentLineupController,
   getLeagueMeController,
   getLeagueRankingController,
+  getMyBudgetController,
   getMyLeaguesController,
   setLineupController
 } from "../../../../controllers/leagues.controllers.js";
@@ -23,6 +24,12 @@ export default async function leaguesRoutes(fastify) {
     schema: getLeagueMeController.schema,
     preHandler: [requireKickbaseToken],
     handler: getLeagueMeController.handler
+  });
+
+  fastify.get("/:leagueId/me/budget", {
+    schema: getMyBudgetController.schema,
+    preHandler: [requireKickbaseToken],
+    handler: getMyBudgetController.handler
   });
 
   fastify.post("/:leagueId/lineup", {
