@@ -108,68 +108,25 @@ export const setLineupController = {
         );
       }
 
-      // 2) Set the new lineup. We've observed that {type, players} and
-      // {lud, pls} both return a 200 but Kickbase silently keeps the old
-      // lineup. Try variants in order and log each so we can see which
-      // one actually persists. We also try sending playerIds as numbers
-      // because Kickbase's own responses use numeric ids (response: pls:
-      // [1581, ...]).
+      // 2) Set the new lineup. Empirically the only variant that
+      // actually persisted in Kickbase was:
       //
-      // The first variant that returns a body whose `lt` matches our
-      // requested formation wins — that's our signal that the submit
-      // actually changed the lineup.
-      const requestedType = request.body.type;
-      const playerStrings = request.body.players.map(String);
-      const playerNumbers = playerStrings.map((id) => Number(id));
-
-      const attempts = [
-        { path: "/lineup", body: { lt: requestedType, pls: playerStrings } },
-        { path: "/lineup", body: { lt: requestedType, pls: playerNumbers } },
-        { path: "/lineup", body: { type: requestedType, players: playerStrings } },
-        { path: "/lineup/fill", body: { lt: requestedType, pls: playerStrings } },
-        { path: "/lineup/fill", body: { lud: requestedType, pls: playerStrings } }
-      ];
-
-      let raw = null;
-      let chosenAttempt = null;
-      for (const attempt of attempts) {
-        try {
-          const resp = await kickbaseRequest({
-            method: "POST",
-            path: `/v4/leagues/${encodeURIComponent(leagueId)}${attempt.path}`,
-            token: request.kickbaseToken,
-            body: attempt.body,
-            log: request.log
-          });
-          const lt = resp?.lt ?? resp?.type;
-          request.log?.info(
-            { path: attempt.path, bodyShape: Object.keys(attempt.body), respLt: lt },
-            "Lineup submit attempt"
-          );
-          // Success criteria: response formation matches what we asked for.
-          if (lt === requestedType) {
-            raw = resp;
-            chosenAttempt = attempt;
-            break;
-          }
-          if (!raw) {
-            raw = resp;
-            chosenAttempt = attempt;
-          }
-        } catch (err) {
-          request.log?.warn(
-            { path: attempt.path, err: err.message },
-            "Lineup submit attempt failed"
-          );
-        }
-      }
+      //   POST /v4/leagues/{id}/lineup    body: { type, players: [strings] }
+      //
+      // The sibling /lineup/fill endpoint and {lud, pls} body shape from
+      // the public docs both return 200 but Kickbase silently keeps the
+      // old lineup. Response body is {} on success — no formation echo.
+      const raw = await kickbaseRequest({
+        method: "POST",
+        path: `/v4/leagues/${encodeURIComponent(leagueId)}/lineup`,
+        token: request.kickbaseToken,
+        body: { type: request.body.type, players: request.body.players },
+        log: request.log
+      });
 
       return setGeneralResponse(reply, 200, "Success", "Lineup updated", {
         cleared,
-        lineup: raw ?? {},
-        chosenAttempt: chosenAttempt
-          ? { path: chosenAttempt.path, bodyKeys: Object.keys(chosenAttempt.body) }
-          : null
+        lineup: raw ?? {}
       });
     } catch (error) {
       return handleErrorResponse(reply, error, request);
